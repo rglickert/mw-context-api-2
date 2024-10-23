@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # ChromaDB Service
+  mwchromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "${MWCHROMADB_PORT:-8000}:8000"
+    networks:
+      - hf-dspy_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+
+  # Postgres Service
+  mw-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-catsarecool}"
+      POSTGRES_USER: "${POSTGRES_USER:-myuser}"
+      POSTGRES_DB: "${POSTGRES_DB:-mister_whisper}"
+    ports:
+      - "${MW_POSTGRES_PORT:-5436}:5432"
+    networks:
+      - hf-dspy_network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+
+  # Ollama LLM Service with GPU Access
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    volumes:
+      - "/mnt/mwNAS/AI/Models/LLM/ollama_data:/data"
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      OLLAMA_CONFIG: /data/config.json
+    networks:
+      - hf-dspy_network
+    restart: unless-stopped
+
+  # HF-DSPy Manager Service
+  hf-dspy-manager:
+    image: nvidia/cuda:12.2.0-devel-ubuntu22.04
+    volumes:
+      - "./modules:/app/modules"
+      - "./dspy_modules.yaml:/app/dspy_modules.yaml"
+      - "./main.py:/app/main.py"
+      - "./api_operations.py:/app/api_operations.py"
+      - "./module_runner.py:/app/module_runner.py"
+      - "/mnt/mwNAS/AI/Models:/models"
+    ports:
+      - "${HF_DSPY_MANAGER_PORT:-8081}:8080"
+    environment:
+      HUGGINGFACE_API_KEY: ${HUGGINGFACE_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      MODEL_NAME: "default-model"
+      PORT: "8080"
+      YAML_PATH: "/app/dspy_modules.yaml"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    networks:
+      - hf-dspy_network
+    restart: unless-stopped
+    command: >
+      /bin/bash -c "
+      apt-get update &&
+      apt-get install -y git python3 python3-pip &&
+      python3 -m pip install --upgrade pip &&
+      pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121 &&
+      python3 main.py"
+
+  # Omost Service
+  omost:
+    image: nvidia/cuda:12.2.0-devel-ubuntu22.04
+    volumes:
+      - "/mnt/mwNAS/AI/Models:/models"
+      - "./omost:/app/omost"
+      - "./api_operations.py:/app/api_operations.py"
+      - "./module_runner.py:/app/module_runner.py"
+    ports:
+      - "${OMOST_PORT:-8082}:8080"
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
+    networks:
+      - hf-dspy_network
+    restart: unless-stopped
+    command: >
+      /bin/bash -c "
+      apt-get update &&
+      apt-get install -y git python3 python3-pip &&
+      if [ ! -d \"/app/omost\" ]; then git clone https://github.com/lllyasviel/Omost /app/omost; fi &&
+      python3 -m pip install --upgrade pip &&
+      pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121 &&
+      pip install -r /app/omost/requirements.txt &&
+      python3 /app/omost/gradio_app.py"
+
+networks:
+  hf-dspy_network:
+    driver: bridge

@@ -1,0 +1,3 @@
+[submodule "modules/dspy"]
+	path = modules/dspy
+	url = https://github.com/stanfordnlp/dspy.git

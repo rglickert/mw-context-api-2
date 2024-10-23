@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSPy Manager Web Interface - Full 8-Step Workflow</title>
+    <link rel="stylesheet" href="/static/style.css"> <!-- Assuming external CSS for consistent design -->
+    <script>
+        async function loadModules() {
+            try {
+                let response = await fetch('/list_modules');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                let data = await response.json();
+
+                let moduleSelect = document.getElementById('module-select');
+                moduleSelect.innerHTML = "";  // Clear existing options
+                data.forEach(module => {
+                    let option = document.createElement('option');
+                    option.value = module.name;
+                    option.text = `${module.name} - ${module.description}`;
+                    moduleSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading modules:', error);
+            }
+        }
+
+        async function loadFunctions() {
+            try {
+                let selectedModule = document.getElementById('module-select').value;
+                let response = await fetch(`/get_functions?module_name=${selectedModule}`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                let data = await response.json();
+
+                let functionSelect = document.getElementById('function-select');
+                functionSelect.innerHTML = "";  // Clear existing options
+                data.functions.forEach(func => {
+                    let option = document.createElement('option');
+                    option.value = func;
+                    option.text = func;
+                    functionSelect.appendChild(option);
+                });
+
+                // Generate input fields for arguments if metadata is available
+                document.getElementById('argument-fields').innerHTML = "";  // Clear argument fields
+                if (data.arguments) {
+                    data.arguments.forEach(arg => {
+                        let label = document.createElement('label');
+                        label.for = arg;
+                        label.innerText = `Argument (${arg}): `;
+                        let input = document.createElement('input');
+                        input.type = 'text';
+                        input.name = arg;
+                        input.id = arg;
+
+                        let br = document.createElement('br');
+                        document.getElementById('argument-fields').appendChild(label);
+                        document.getElementById('argument-fields').appendChild(input);
+                        document.getElementById('argument-fields').appendChild(br);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading functions:', error);
+            }
+        }
+
+        async function executeFunction() {
+            try {
+                let moduleName = document.getElementById('module-select').value;
+                let functionName = document.getElementById('function-select').value;
+
+                // Collect arguments from dynamic input fields
+                let argumentFields = document.getElementById('argument-fields').children;
+                let args = [];
+                let kwargs = {};
+                for (let i = 0; i < argumentFields.length; i++) {
+                    if (argumentFields[i].tagName === 'INPUT') {
+                        args.push(argumentFields[i].value);  // Assuming positional arguments for simplicity
+                    }
+                }
+
+                let response = await fetch('/execute_function', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ module_name: moduleName, function_name: functionName, args: args, kwargs: kwargs })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Execution failed');
+                }
+
+                let data = await response.json();
+                document.getElementById('execution-response').innerText = data.result || data.error;
+            } catch (error) {
+                console.error('Error executing function:', error);
+                document.getElementById('execution-response').innerText = 'An error occurred during execution.';
+            }
+        }
+
+        function navigateToStep(stepNumber) {
+            // Function to navigate to different sections/steps of DSPy workflow
+            let sections = document.getElementsByClassName('workflow-step');
+            for (let section of sections) {
+                section.style.display = 'none';
+            }
+            document.getElementById(`step-${stepNumber}`).style.display = 'block';
+        }
+    </script>
+</head>
+<body onload="loadModules()">
+    <div class="progress-bar">
+        <button onclick="navigateToStep(1)">1. Define Task</button>
+        <button onclick="navigateToStep(2)">2. Define Pipeline</button>
+        <button onclick="navigateToStep(3)">3. Explore Examples</button>
+        <button onclick="navigateToStep(4)">4. Define Data</button>
+        <button onclick="navigateToStep(5)">5. Define Metric</button>
+        <button onclick="navigateToStep(6)">6. Zero-Shot Evaluation</button>
+        <button onclick="navigateToStep(7)">7. Compile Optimizer</button>
+        <button onclick="navigateToStep(8)">8. Iterate</button>
+    </div>
+
+    <!-- Step 1: Define Your Task -->
+    <div id="step-1" class="workflow-step">
+        <h2>Step 1: Define Your Task</h2>
+        <form id="task-definition-form">
+            <label for="task-name">Task Name:</label>
+            <input type="text" id="task-name" name="task-name"><br><br>
+            <label for="task-description">Task Description:</label><br>
+            <textarea id="task-description" name="task-description" rows="4" cols="50"></textarea><br><br>
+            <label for="task-input-example">Expected Input Example:</label>
+            <input type="text" id="task-input-example" name="task-input-example"><br>
+            <label for="task-output-example">Expected Output Example:</label>
+            <input type="text" id="task-output-example" name="task-output-example"><br><br>
+            <button type="button" onclick="navigateToStep(2)">Next: Define Pipeline</button>
+        </form>
+    </div>
+
+    <!-- Step 2: Define Your Pipeline -->
+    <div id="step-2" class="workflow-step" style="display:none;">
+        <h2>Step 2: Define Your Pipeline</h2>
+        <!-- Add pipeline builder UI here -->
+        <button type="button" onclick="navigateToStep(3)">Next: Explore Examples</button>
+    </div>
+
+    <!-- Step 3: Explore a Few Examples -->
+    <div id="step-3" class="workflow-step" style="display:none;">
+        <h2>Step 3: Explore a Few Examples</h2>
+        <label for="example-input">Example Input:</label>
+        <input type="text" id="example-input"><br><br>
+        <button type="button" onclick="executeFunction()">Run Example</button>
+        <div id="execution-response"></div><br>
+        <button type="button" onclick="navigateToStep(4)">Next: Define Data</button>
+    </div>
+
+    <!-- Additional steps go here, with a similar format for Steps 4 to 8 -->
+</body>
+</html>

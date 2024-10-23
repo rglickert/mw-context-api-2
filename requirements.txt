@@ -1,0 +1,54 @@
+# Core requirements
+requests>=2.25.1
+docker>=5.0.0
+GitPython>=3.1.0
+psycopg2-binary
+setuptools>=42.0.0
+numpy
+opencv-python
+matplotlib
+watchdog  # Required for reload_main.py to dynamically reload on changes
+
+# DSPy and related dependencies
+dspy==2.5.12
+openai>=0.28.1,<2.0.0
+pandas
+regex
+ujson
+tqdm
+datasets>=2.14.6,<3.0.0
+optuna
+structlog
+jinja2
+magicattr~=0.1.6
+litellm
+diskcache
+
+# Additional database drivers
+neo4j
+psycopg2-binary
+
+# ChromaDB
+chromadb~=0.4.14
+
+# Other dependencies
+sentence-transformers
+faiss-cpu
+pymilvus~=2.3.7
+google-cloud-aiplatform==1.43.0
+clickhouse-connect
+snowflake-snowpark-python
+fastembed
+groq>=0.8.0
+langfuse>=2.36.1
+pgvector~=0.2.5
+fastembed
+pytest
+pyepsilla
+
+# Flask Web framework and related
+flask
+flask-expects-json  # Required for JSON validation in Flask endpoints
+
+# Watchdog for live reloading in development (reload_main.py)
+watchdog

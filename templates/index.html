@@ -1,0 +1,103 @@
+<!-- Updated index.html (templates/index.html) -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSPy Manager Web Interface</title>
+    <script>
+        async function loadModules() {
+            let response = await fetch('/list_modules');
+            let data = await response.json();
+
+            let moduleSelect = document.getElementById('module-select');
+            moduleSelect.innerHTML = "";  // Clear existing options
+            data.forEach(module => {
+                let option = document.createElement('option');
+                option.value = module.name;
+                option.text = `${module.name} - ${module.description}`;
+                moduleSelect.appendChild(option);
+            });
+        }
+
+        async function loadFunctions() {
+            let selectedModule = document.getElementById('module-select').value;
+            let response = await fetch(`/get_functions?module_name=${selectedModule}`);
+            let data = await response.json();
+
+            let functionSelect = document.getElementById('function-select');
+            functionSelect.innerHTML = "";  // Clear existing options
+            data.functions.forEach(func => {
+                let option = document.createElement('option');
+                option.value = func;
+                option.text = func;
+                functionSelect.appendChild(option);
+            });
+
+            // Generate input fields for arguments if metadata is available
+            document.getElementById('argument-fields').innerHTML = "";  // Clear argument fields
+            if (data.arguments) {
+                data.arguments.forEach(arg => {
+                    let label = document.createElement('label');
+                    label.for = arg;
+                    label.innerText = `Argument (${arg}): `;
+                    let input = document.createElement('input');
+                    input.type = 'text';
+                    input.name = arg;
+                    input.id = arg;
+
+                    let br = document.createElement('br');
+                    document.getElementById('argument-fields').appendChild(label);
+                    document.getElementById('argument-fields').appendChild(input);
+                    document.getElementById('argument-fields').appendChild(br);
+                });
+            }
+        }
+    </script>
+</head>
+<body onload="loadModules()">
+    <h1>Welcome to DSPy Manager Web Interface!</h1>
+
+    <!-- Dropdown Selection for Module and Function -->
+    <h2>Select a Module and Function</h2>
+    <label for="module-select">Select Module:</label>
+    <select id="module-select" onchange="loadFunctions()"></select><br><br>
+
+    <label for="function-select">Select Function:</label>
+    <select id="function-select"></select><br><br>
+
+    <!-- Dynamic Argument Fields -->
+    <div id="argument-fields"></div><br>
+
+    <button onclick="executeFunction()">Execute Function</button>
+    <div id="execution-response"></div>
+
+    <script>
+        // JavaScript to handle function execution
+        async function executeFunction() {
+            let moduleName = document.getElementById('module-select').value;
+            let functionName = document.getElementById('function-select').value;
+
+            // Collect arguments from dynamic input fields
+            let argumentFields = document.getElementById('argument-fields').children;
+            let args = [];
+            let kwargs = {};
+            for (let i = 0; i < argumentFields.length; i++) {
+                if (argumentFields[i].tagName === 'INPUT') {
+                    args.push(argumentFields[i].value);  // Assuming positional arguments for simplicity
+                }
+            }
+
+            let response = await fetch('/execute_function', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ module_name: moduleName, function_name: functionName, args: args, kwargs: kwargs })
+            });
+
+            let data = await response.json();
+            document.getElementById('execution-response').innerText = data.result || data.error;
+        }
+    </script>
+</body>
+</html>
