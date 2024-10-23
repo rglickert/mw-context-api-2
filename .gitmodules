@@ -1,3 +1,6 @@
 [submodule "modules/dspy"]
 	path = modules/dspy
 	url = https://github.com/stanfordnlp/dspy.git
+[submodule "omost"]
+	path = omost
+	url = https://github.com/lllyasviel/Omost.git
